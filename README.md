@@ -40,6 +40,24 @@
 
   - [小節作業：家具店的菜雞銷售奇遇記](#小節作業家具店的菜雞銷售奇遇記)
 
+- [Tables 資料表管理](#tables-資料表管理)
+
+  - [從單張資料表升級到多張資料表的管理流程](#從單張資料表升級到多張資料表的管理流程)
+
+  - [主鍵和外來鍵的差異](#主鍵和外來鍵的差異)
+
+  - [如何規劃外來鍵與資料表拆分](#如何規劃外來鍵與資料表拆分)
+
+  - [主鍵設定方式、ID 自動遞增方法](#主鍵設定方式id-自動遞增方法)
+
+  - [建立完整資料庫流程](#建立完整資料庫流程)
+
+  - [合併資料表查詢](#合併資料表查詢)
+
+  - [主鍵、外來鍵 constraint 約束提醒](#主鍵外來鍵-constraint-約束提醒)
+
+  - [小節作業：主鍵、外來鍵、INNER JOIN](#小節作業主鍵外來鍵inner-join)
+
 - [資料庫與 Docker 環境建立](#資料庫與-docker-環境建立)
 
   - [安裝 DBeaver](#安裝-dbeaver)
@@ -327,6 +345,199 @@ WHERE stock = 0 AND status = 'inactive';
 ## 小節作業：家具店的菜雞銷售奇遇記
 
 [小節作業](./homework/work1/homework_1.md)
+
+## Tables 資料表管理
+
+[miro 簡報](https://miro.com/app/board/uXjVLMcM_hQ=/)
+
+### 從單張資料表升級到多張資料表的管理流程
+
+![圖片21](./images/21.PNG)
+
+當我們只有單張資料表時，想要修改部門名稱的開發部為資訊部時，就會**需要花較多的時間去針對所有開發部的員工資料去進行寫入修改**，對資料庫的效能來說較差。
+
+實務上則是會拆分成多張資料表來進行管理，如下圖：
+
+![圖片22](./images/22.PNG)
+
+多了一個部門編號 (team_id) 的欄位，並且其會對應到新的部門名稱資料表 (teams) 中的部門編號 (id) 的欄位。
+
+這時候如果想要修改開發部為資訊部時，就只需要對部門名稱資料表 (teams) 進行寫入修改即可。
+
+### 主鍵和外來鍵的差異
+
+當拆分成多張資料表進行管理時，會將資料表的指定欄位設定為主鍵和外來鍵來進行多張資料表之間的關聯。
+
+![圖片23](./images/23.PNG)
+
+- 主鍵 ( Primary Key，簡稱 PK )
+
+  - 1.每個資料表都要有**一個主鍵** (只能有一個)。
+
+  - 2.主鍵的值必須是**唯一的**，**不能重複**。
+
+  - 3.主鍵不能是 `Null` 值，但外來鍵可以是 `Null` 值。
+
+  - 4.大部分情況會命名為 `'id'`，使用整數或 UUID 。
+
+  - 5.設定後就不應該再更動。
+
+- 外來鍵 ( Foreign Key，簡稱 FK )
+
+  - 1.當資料**需要關聯到其他表格**時才會用到。
+
+  - 2.同一個資料表中，可以有多個外來鍵。
+
+  - 3.命名通常會用 `'參考資料表_id'` 的格式。
+
+  - 4.外來鍵必須**對應到被參考資料表的主鍵**。
+
+剛剛的範例中就是將員工資料表 (users) 的員工編號 (id) 設為主鍵 (PK)，而外來鍵 (FK) 部門編號 (team_id) 則是會對應到部門名稱資料表 (teams) 中的主鍵 (PK) 部門編號 (id)。
+
+### 如何規劃外來鍵與資料表拆分
+
+![圖片24](./images/24.PNG)
+
+### 主鍵設定方式、ID 自動遞增方法
+
+可以在新增資料表時，使用 `PRIMARY KEY` 設定主鍵，使用 `SERIAL` 則是可以設定欄位為 ID 自動遞增。
+
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY, -- 員工編號，主鍵
+  name VARCHAR(50) -- 員工姓名
+);
+```
+
+現在新增資料只需要設定員工姓名 ( name ) 欄位，員工編號 ( id ) 則會自己遞增。
+
+```sql
+INSERT INTO users (name)
+VALUES
+  ('張小美'),
+  ('張小立'),
+  ('張小花');
+```
+
+![圖片25](./images/25.PNG)
+
+### 建立完整資料庫流程
+
+根據以下結構建立完整的資料表。
+
+![圖片26](./images/26.PNG)
+
+- 建立 teams 資料表
+
+  ```sql
+  CREATE TABLE teams (
+    id SERIAL PRIMARY KEY, -- 部門編號，主鍵
+    name VARCHAR(50)  -- 部門名稱
+  );
+  ```
+
+- 建立 users 資料表
+
+  使用 `FOREIGN KEY` (未來鍵欄位) `REFERENCES` 資料表 (主鍵欄位) 語法來設定外來鍵並關聯資料表主鍵。
+
+  ```sql
+  CREATE TABLE users (
+    id SERIAL PRIMARY KEY, -- 員工編號，主鍵
+    name VARCHAR(50), -- 姓名
+    salary INTEGER, -- 薪資
+    team_id INTEGER,  -- 部門編號，外來鍵
+    FOREIGN KEY (team_id) REFERENCES teams (id) -- 設定外來鍵關聯
+  );
+  ```
+
+- 新增部門 ( teams ) 資料
+
+  ```sql
+  INSERT INTO teams (name)
+  VALUES
+    ('開發部'),
+    ('人事部');
+  ```
+
+  ![圖片27](./images/27.PNG)
+
+- 新增員工 ( users ) 資料
+
+  ```sql
+  INSERT INTO users (name, salary, team_id)
+  VALUES
+    ('張小明', 45000, 1),
+    ('王大明', 48000, 1),
+    ('李小華', 52000, 2),
+    ('陳小玉', 55000, 2),
+    ('林小豪', 47000, 1);
+  ```
+
+  ![圖片28](./images/28.PNG)
+
+### 合併資料表查詢
+
+- 搭配 `WHERE` 條件。
+
+  同時查詢兩張表的指定欄位，並搭配 `WHERE` 根據部門 id 查詢符合的資料。
+
+  > `users.name` 和 `teams.name` 欄位名稱相同，可能導致錯誤，因此可以使用 `AS` 指定欄位別名。
+
+  ```sql
+  SELECT
+    users.id,
+    users.name,
+    users.salary,
+    teams.name AS 部門名稱
+  FROM users,teams
+  WHERE users.team_id = teams.id;
+  ```
+
+  ![圖片29](./images/29.PNG)
+
+- 使用 `INNER JOIN`。
+
+  實際結果與 `WHERE` 相同，主流建議使用這種方式。
+
+  `INNER JOIN` 要合併的資料表 `ON` 條件。
+
+  > `FROM` 後面只需要主要查詢的資料表。
+
+  ```sql
+  SELECT
+    users.id,
+    users.name,
+    users.salary,
+    teams.name AS 部門名稱
+  FROM users
+  INNER JOIN teams ON users.team_id = teams.id;
+  ```
+
+  ![圖片30](./images/30.PNG)
+
+### 主鍵、外來鍵 constraint 約束提醒
+
+- 當新增資料時主鍵重複，會出現錯誤提示。
+
+  ```sql
+  INSERT INTO users (id, name, salary, team_id)
+  VALUES (4, '李小花', 48000, 2);
+  ```
+
+  ![圖片31](./images/31.PNG)
+
+- 當新增資料時外來鍵不存在對應資料，會出現錯誤提示。
+
+  ```sql
+  INSERT INTO users (name, salary, team_id)
+  VALUES ('李小花', 48000, 3);
+  ```
+
+  ![圖片32](./images/32.PNG)
+
+### 小節作業：主鍵、外來鍵、INNER JOIN
+
+[小節作業](./homework/work2/homework_2.md)
 
 ## 資料庫與 Docker 環境建立
 
