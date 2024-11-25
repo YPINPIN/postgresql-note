@@ -58,6 +58,20 @@
 
   - [小節作業：主鍵、外來鍵、INNER JOIN](#小節作業主鍵外來鍵inner-join)
 
+- [postgres 函式](#postgres-函式)
+
+  - [NULL 介紹](#null-介紹)
+
+  - [COALESCE 函數](#coalesce-函數)
+
+  - [DISTINCT 不重複函數](#distinct-不重複函數)
+
+  - [COUNT 函數](#count-函數)
+
+  - [AVG、SUM、MAX、MIN 函數](#avgsummaxmin-函數)
+
+  - [UUID 介紹](#uuid-介紹)
+
 - [資料庫與 Docker 環境建立](#資料庫與-docker-環境建立)
 
   - [安裝 DBeaver](#安裝-dbeaver)
@@ -538,6 +552,289 @@ VALUES
 ### 小節作業：主鍵、外來鍵、INNER JOIN
 
 [小節作業](./homework/work2/homework_2.md)
+
+## postgres 函式
+
+### NULL 介紹
+
+`NULL` 在資料庫中表示「未知」或「沒有值」。和零 (0) 或空字串 ('') 是不同的概念。
+
+- 使用時機
+
+  用來表示資料庫中某個欄位尚未填入資料。
+
+  在實際應用中，並不是所有資料在一開始就具備，像是表單的某些欄位可能會被使用者選擇性填寫。例如：
+
+  - 社群網站的個人大頭照
+
+  - 新員工尚未被指派部門，需先顯示為 `null`
+
+- 使用方法
+
+  可以設置 `NOT NULL` 表示欄位必填，`NULL` 則表示欄位可為空。
+
+  ```sql
+  -- 建立員工資料表
+  CREATE TABLE users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(50) NOT NULL,
+      email VARCHAR(100) NOT NULL,
+      salary INTEGER NULL
+  );
+
+  -- 新增員工資料
+  INSERT INTO users (name, email)
+  VALUES ('王小明', 'dfksfdh@gamil.com');
+  ```
+
+  ![圖片33](./images/33.PNG)
+
+  若是未正確設置必填欄位，則會出現錯誤提示。
+
+  ```sql
+  -- 新增員工資料 (未正確設置必填欄位)
+  INSERT INTO users (name)
+  VALUES ('王小美');
+  ```
+
+  ![圖片34](./images/34.PNG)
+
+### COALESCE 函數
+
+用來檢查並處理 `NULL` 結果。
+
+會依序檢查傳入的參數，**回傳參數列表中第一個不是 `NULL` 的值**。
+
+- users 資料表
+
+  ```sql
+  -- 建立員工資料表
+  CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    team_name VARCHAR(50) NULL,  -- 可能還沒分配部門
+    salary INTEGER NULL         -- 可能還沒設定薪水
+  );
+  ```
+
+- 模擬員工資料
+
+  ```sql
+  -- 插入員工資料，展示不同情況
+  INSERT INTO users (name, email, team_name, salary) VALUES
+    -- 完整資料的員工
+    ('張小明', 'zhang@example.com', '開發部', 45000),
+    ('王大明', 'wang@example.com', '行銷部', 48000),
+
+    -- 還沒分配部門，但已有薪水
+    ('李小華', 'lee@example.com', NULL, 42000),
+    ('陳小玲', 'chen@example.com', NULL, 44000),
+
+    -- 已分配部門，但還沒定薪水
+    ('林小美', 'lin@example.com', '人事部', NULL),
+    ('周小威', 'zhou@example.com', '開發部', NULL),
+
+    -- 新進員工，部門和薪水都還沒設定
+    ('劉小安', 'liu@example.com', NULL, NULL),
+    ('黃小凱', 'huang@example.com', NULL, NULL);
+  ```
+
+- 原始資料表
+
+  ![圖片35](./images/35.PNG)
+
+- 使用 COALESCE 函數整理查詢結果
+
+  ```sql
+  SELECT
+    id,
+    name,
+    email,
+    COALESCE(team_name, '待分配') as team_name,
+    COALESCE(salary, 0) as salary
+  FROM users;
+  ```
+
+  ![圖片36](./images/36.PNG)
+
+### DISTINCT 不重複函數
+
+SQL 中用於**去除重複資料**的關鍵字。
+
+- users 資料表
+
+  ```sql
+  -- 建立員工資料表
+  CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    team_name VARCHAR(50) NULL,
+    salary INTEGER NULL
+  );
+  ```
+
+- 模擬員工資料
+
+  ```sql
+  INSERT INTO users (name, email, team_name, salary)
+  VALUES
+      ('陳志明', 'chihming.chen@company.com', '開發部', 68000),
+      ('林雅婷', 'yating.lin@company.com', '開發部', 55000),
+      ('王建宏', 'jianhong.wang@company.com', '開發部', 46000),
+      ('張美玲', 'meiling.chang@company.com', '人事部', 42000),
+      ('黃佳琳', 'jialin.huang@company.com', '人事部', 48000);
+  ```
+
+- 原始資料表
+
+  ![圖片37](./images/37.PNG)
+
+- 使用 `DISTINCT` 查詢有哪些部門
+
+  ```sql
+  SELECT DISTINCT team_name FROM users;
+  ```
+
+  ![圖片38](./images/38.PNG)
+
+### COUNT 函數
+
+COUNT 是一個計數函數，用來**計算資料表中的資料筆數**
+。是最常用的集合函數（Aggregate Function）之一。
+
+- 資料表
+
+  ![圖片39](./images/39.PNG)
+
+- 計算總共有幾個員工
+
+  ```sql
+  SELECT COUNT(*) AS 員工總數
+  FROM users;
+  ```
+
+  ![圖片40](./images/40.PNG)
+
+- 計算開發部有幾個員工
+
+  ```sql
+  SELECT COUNT(*) AS 開發部人數
+  FROM users
+  WHERE team_name = '開發部';
+  ```
+
+  ![圖片41](./images/41.PNG)
+
+- 計算薪水大於 45000 的員工人數
+
+  ```sql
+  SELECT COUNT(*) AS 高薪員工數
+  FROM users
+  WHERE salary > 45000;
+  ```
+
+  ![圖片42](./images/42.PNG)
+
+### AVG、SUM、MAX、MIN 函數
+
+AVG（Average）：計算一組數值的「平均值」。
+
+SUM（Summary）：計算一組數值的「總和」。
+
+MAX（Maximum）：找出一組數值中的「最大值」。
+
+MIN（Minimum）：找出一組數值中的「最小值」。
+
+- 資料表
+
+  ![圖片39](./images/39.PNG)
+
+- 公司整體統計
+
+  ```sql
+  SELECT
+    AVG(salary) AS 平均薪資,
+    SUM(salary) AS 總薪資
+  FROM users;
+  ```
+
+  ![圖片43](./images/43.PNG)
+
+- 開發部統計
+
+  ```sql
+  SELECT
+    AVG(salary) AS 開發部平均薪資,
+    SUM(salary) AS 開發部總薪資
+  FROM users
+  WHERE team_name = '開發部';
+  ```
+
+  ![圖片44](./images/44.PNG)
+
+- 完整統計資料
+
+  ```sql
+  SELECT
+    COUNT(*) AS 員工數,
+    AVG(salary) AS 平均薪資,
+    SUM(salary) AS 總薪資,
+    MAX(salary) AS 最高薪資,
+    MIN(salary) AS 最低薪資
+  FROM users;
+  ```
+
+  ![圖片45](./images/45.PNG)
+
+### UUID 介紹
+
+資料庫開啟 UUID 功能 (postgresql 13 版本以上不用)：
+
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+```
+
+SERIAL 跟 UUID 差異：
+
+| 特性     | SERIAL                  | UUID                                                       |
+| :------- | :---------------------- | :--------------------------------------------------------- |
+| 格式     | 整數 (1, 2, 3...)       | 32 位元十六進制 (如：550e8400-e29b-41d4-a716-446655440000) |
+| 生成方式 | 自動遞增                | 隨機生成                                                   |
+| 空間使用 | 小                      | 大                                                         |
+| 優點     | 簡單、易讀、節省空間    | 全球唯一、安全性高                                         |
+| 建立語法 | `id SERIAL PRIMARY KEY` | `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`            |
+| 可預測性 | 容易預測下一個值        | 完全隨機，無法預測                                         |
+
+- users 資料表 (使用 UUID)
+
+  ```sql
+  -- 建立員工資料表
+  CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    team_name VARCHAR(50) NULL,
+    salary INTEGER NULL
+  );
+  ```
+
+- 模擬員工資料
+
+  ```sql
+  INSERT INTO users (name, email, team_name, salary)
+  VALUES
+      ('陳志明', 'chihming.chen@company.com', '開發部', 68000),
+      ('林雅婷', 'yating.lin@company.com', '開發部', 55000),
+      ('王建宏', 'jianhong.wang@company.com', '開發部', 46000),
+      ('張美玲', 'meiling.chang@company.com', '人事部', 42000),
+      ('黃佳琳', 'jialin.huang@company.com', '人事部', 48000);
+  ```
+
+- 資料表結果
+
+  ![圖片46](./images/46.PNG)
 
 ## 資料庫與 Docker 環境建立
 
