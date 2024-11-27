@@ -100,6 +100,12 @@
 
   - [JOIN 整合教學](#join-整合教學)
 
+- [子查詢 Subquery](#子查詢-subquery)
+
+  - [搭配 WHERE 篩選](#搭配-where-篩選)
+
+  - [子查詢延伸運用](#子查詢延伸運用)
+
 - [資料庫與 Docker 環境建立](#資料庫與-docker-環境建立)
 
   - [安裝 DBeaver](#安裝-dbeaver)
@@ -1249,6 +1255,139 @@ GROUP BY teams.name;
 ```
 
 ![圖片69](./images/69.PNG)
+
+## 子查詢 Subquery
+
+- 可在一個 SQL 指令使用多個 `SELECT`。
+
+- 在開頭使用的 `SELECT` 是主要的部分，所以稱為「**主查詢**」，其餘 `SELECT` 稱為「**子查詢**」。
+
+- 會先運行完子查詢在運行主查詢，通常使用子查詢來獲取計算或篩選條件資料。
+
+- 子查詢會放在 `()` 中。
+
+公司員工資料庫範例：
+
+```sql
+-- 建立部門資料表
+CREATE TABLE teams (
+    id SERIAL PRIMARY KEY,  -- 部門編號，主鍵
+    name VARCHAR(50)        -- 部門名稱
+);
+
+-- 建立員工資料表
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,     -- 員工編號，主鍵
+    name VARCHAR(50),          -- 姓名
+    email VARCHAR(100),        -- 信箱
+    salary INTEGER,            -- 薪資
+    team_id INTEGER,           -- 部門編號，外來鍵
+    FOREIGN KEY (team_id) REFERENCES teams(id)  -- 設定外來鍵關聯
+);
+
+-- 新增部門資料
+INSERT INTO teams (name)
+VALUES
+    ('開發部'),
+    ('人事部');
+
+-- 新增員工資料
+INSERT INTO users (name,email, salary, team_id)
+VALUES
+    ('張小明','a@gmail.com', 45000, 1),
+    ('王大明','b@gmail.com',  48000, 1),
+    ('李小華','c@gmail.com', 43000, 2),
+    ('陳小玉','d@gmail.com', 55000, 2),
+    ('林小豪','e@gmail.com', 47000, 1);
+```
+
+![圖片70](./images/70.PNG)
+
+### 搭配 WHERE 篩選
+
+#### 查出哪些員工大於平均薪資
+
+```sql
+SELECT name, salary
+FROM users
+WHERE salary > 47600; -- 平均薪資的值可以透過子查詢取得
+```
+
+調整為子查詢作法：
+
+```sql
+SELECT name, salary
+FROM users
+WHERE salary > (SELECT AVG(salary) FROM users);
+```
+
+![圖片71](./images/71.PNG)
+
+### 子查詢延伸運用
+
+#### 顯示每位員工薪資與平均薪資的差距
+
+透過子查詢先取得平均薪資在計算。
+
+```sql
+SELECT
+    name AS 姓名,
+    salary AS 薪資,
+    salary - (SELECT AVG(salary) FROM users) AS 差距值
+FROM users;
+```
+
+![圖片72](./images/72.PNG)
+
+#### 用部門名稱來找 team_id 插入資料
+
+透過子查詢先取得 '開發部' 的 id，在將其作為資料插入。
+
+```sql
+INSERT INTO users (name, email, salary, team_id)
+VALUES
+(
+  '新同事',
+  'new@gmail.com',
+  50000,
+  (
+    -- 子查詢取得 team_id
+    SELECT id FROM teams
+    WHERE name = '開發部'
+  )
+);
+```
+
+![圖片73](./images/73.PNG)
+
+![圖片74](./images/74.PNG)
+
+#### 透過 Eamil 找到某位員工的薪資，來設定新員工薪資
+
+透過子查詢先獲得指定 Eamil 員工的薪資，在將其作為資料插入。
+
+```sql
+INSERT INTO users (name, email, salary, team_id)
+VALUES
+(
+  '新同事-2',
+  'new2@gmail.com',
+  (
+    -- 子查詢取得指定 Eamil 員工的薪資
+    SELECT salary FROM users
+    WHERE email = 'a@gmail.com'
+  ),
+  (
+    -- 子查詢取得 team_id
+    SELECT id FROM teams
+    WHERE name = '開發部'
+  )
+);
+```
+
+![圖片75](./images/75.PNG)
+
+![圖片76](./images/76.PNG)
 
 ## 資料庫與 Docker 環境建立
 
