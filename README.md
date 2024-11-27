@@ -82,6 +82,18 @@
 
   - [JOIN 搭配 COALESCE 設計](#join-搭配-coalesce-設計)
 
+- [ORDER BY 排序資料](#order-by-排序資料)
+
+  - [ASC 從小到大](#asc-從小到大)
+
+  - [DESC 從大到小](#desc-從大到小)
+
+  - [LIMIT 筆數設定](#limit-筆數設定)
+
+  - [多條件排序](#多條件排序)
+
+  - [JOIN 組合+排序技巧](#join-組合排序技巧)
+
 - [資料庫與 Docker 環境建立](#資料庫與-docker-環境建立)
 
   - [安裝 DBeaver](#安裝-dbeaver)
@@ -1006,6 +1018,131 @@ FULL JOIN teams ON users.team_id = teams.id;
 ```
 
 ![圖片58](./images/58.PNG)
+
+## ORDER BY 排序資料
+
+可以使用 `ORDER BY` 來設置排序條件，默認值為 `ASC`。
+
+公司員工資料庫範例：
+
+```sql
+-- 建立部門資料表
+CREATE TABLE teams (
+    id SERIAL PRIMARY KEY,  -- 部門編號，主鍵
+    name VARCHAR(50)        -- 部門名稱
+);
+
+-- 建立員工資料表
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,     -- 員工編號，主鍵
+    name VARCHAR(50),          -- 姓名
+    salary INTEGER,            -- 薪資
+    team_id INTEGER,           -- 部門編號，外來鍵
+    FOREIGN KEY (team_id) REFERENCES teams(id)  -- 設定外來鍵關聯
+);
+
+-- 新增部門資料
+INSERT INTO teams (name)
+VALUES
+    ('開發部'),
+    ('人事部');
+
+-- 新增員工資料
+INSERT INTO users (name, salary, team_id)
+VALUES
+    ('張小明', 45000, 1),
+    ('王大明', 48000, 1),
+    ('李小華', 43000, 2),
+    ('陳小玉', 55000, 2),
+    ('林小豪', 47000, 1);
+```
+
+![圖片59](./images/59.PNG)
+
+### `ASC` 從小到大
+
+```sql
+-- 薪資從小到大
+SELECT
+  name AS 姓名,
+  salary AS 薪資
+FROM users
+ORDER BY salary ASC;
+```
+
+![圖片60](./images/60.PNG)
+
+### `DESC` 從大到小
+
+```sql
+-- 薪資從大到小
+SELECT
+  name AS 姓名,
+  salary AS 薪資
+FROM users
+ORDER BY salary DESC;
+```
+
+![圖片61](./images/61.PNG)
+
+### `LIMIT` 筆數設定
+
+```sql
+-- 薪資從大到小，只取前兩筆
+SELECT
+  name AS 姓名,
+  salary AS 薪資
+FROM users
+ORDER BY salary DESC
+LIMIT 2;
+```
+
+![圖片62](./images/62.PNG)
+
+### 多條件排序
+
+也可以使用 `,` 分隔多個排序條件。
+
+```sql
+-- 根據部門排序顯示且薪資從大到小
+SELECT
+  name AS 姓名,
+  salary AS 薪資,
+  team_id AS 部門ID
+FROM users
+ORDER BY team_id ASC, salary DESC;
+```
+
+![圖片63](./images/63.PNG)
+
+### JOIN 組合+排序技巧
+
+```sql
+-- JOIN 搭配排序顯示
+SELECT
+  users.name AS 姓名,
+  users.salary AS 薪資,
+  teams.name AS 部門名稱
+FROM users
+INNER JOIN teams ON users.team_id = teams.id
+ORDER BY teams.name, salary ASC;
+```
+
+![圖片64](./images/64.PNG)
+
+```sql
+-- JOIN 搭配 WHERE 篩選、排序顯示
+SELECT
+  users.name AS 姓名,
+  users.salary AS 薪資,
+  teams.name AS 部門名稱
+FROM users
+INNER JOIN teams ON users.team_id = teams.id
+WHERE teams.name = '人事部'
+ORDER BY salary ASC;
+```
+
+![圖片65](./images/65.PNG)
 
 ## 資料庫與 Docker 環境建立
 
