@@ -72,6 +72,16 @@
 
   - [UUID 介紹](#uuid-介紹)
 
+- [JOIN 資料關聯](#join-資料關聯)
+
+  - [INNER JOIN](#inner-join)
+
+  - [LEFT JOIN](#left-join)
+
+  - [FULL JOIN](#full-join)
+
+  - [JOIN 搭配 COALESCE 設計](#join-搭配-coalesce-設計)
+
 - [資料庫與 Docker 環境建立](#資料庫與-docker-環境建立)
 
   - [安裝 DBeaver](#安裝-dbeaver)
@@ -835,6 +845,167 @@ SERIAL 跟 UUID 差異：
 - 資料表結果
 
   ![圖片46](./images/46.PNG)
+
+## JOIN 資料關聯
+
+[miro 簡報](https://miro.com/app/board/uXjVLKVNa80=/)
+
+可將兩個資料表 (Table) 組合在一起。
+
+JOIN 語法種類：
+
+- inner join (最常使用)
+
+- outer join
+
+  - left join
+
+  - right join
+
+  - full join
+
+模擬資料：
+
+```sql
+-- 建立部門資料表
+CREATE TABLE teams (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50)
+);
+
+-- 建立員工資料表
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50),
+    salary INTEGER,
+    team_id INTEGER,  -- 允許 NULL，代表未分配部門的員工
+    FOREIGN KEY (team_id) REFERENCES teams(id)
+);
+
+-- 新增部門資料
+INSERT INTO teams (name)
+VALUES
+    ('開發部'),
+    ('人事部'),
+    ('行銷部'), -- 新成立還沒有人的部門
+    ('研發部'); -- 新成立還沒有人的部門
+
+-- 新增員工資料
+INSERT INTO users (name, salary, team_id)
+VALUES
+    ('張小明', 45000, 1),
+    ('王大明', 48000, 1),
+    ('李小華', 52000, 2),
+    ('陳小玉', 55000, 2),
+    ('林小豪', 47000, 1),
+    ('陳小明', 42000, NULL),  -- 新進員工，還沒分配部門
+    ('王小美', 41000, NULL);  -- 新進員工，還沒分配部門
+```
+
+![圖片47](./images/47.PNG)
+
+![圖片48](./images/48.PNG)
+
+### INNER JOIN
+
+`INNER JOIN` 為只顯示條件符合的合併資料。
+
+![圖片49](./images/49.PNG)
+
+#### 情境：查詢有部門的員工
+
+```sql
+SELECT
+  users.id,
+  users.name AS users_name,
+  users.salary,
+  teams.name AS teams_name
+FROM users
+INNER JOIN teams ON users.team_id = teams.id;
+```
+
+![圖片50](./images/50.PNG)
+
+### LEFT JOIN
+
+`LEFT JOIN` 為包含 `INNER JOIN` 的合併特性，但是同時也保留顯示未符合條件的的**左側資料**，未符合的資料則會顯示 `NULL`。
+
+![圖片51](./images/51.PNG)
+
+#### 情境：未分配部門的員工資料處理
+
+```sql
+SELECT
+  users.name AS users_name,
+  teams.name AS teams_name
+FROM users
+LEFT JOIN teams ON users.team_id = teams.id;
+```
+
+![圖片52](./images/52.PNG)
+
+### RIGHT JOIN
+
+`RIGHT JOIN` 為包含 `INNER JOIN` 的合併特性，但是與 `LEFT JOIN` 相反會保留顯示未符合條件的的**右側資料**，未符合的資料則會顯示 `NULL`。
+
+![圖片53](./images/53.PNG)
+
+#### 情境：查詢空部門的報表
+
+```sql
+SELECT
+  teams.name AS teams_name,
+  users.name AS users_name
+FROM users
+RIGHT JOIN teams ON users.team_id = teams.id;
+```
+
+![圖片54](./images/54.PNG)
+
+同時也可以搭配 `WHERE` 篩選查詢：
+
+```sql
+SELECT
+  teams.name AS teams_name,
+  users.name AS users_name
+FROM users
+RIGHT JOIN teams ON users.team_id = teams.id
+WHERE users.name IS NULL;
+```
+
+![圖片55](./images/55.PNG)
+
+### FULL JOIN
+
+`FULL JOIN` 其實就是 `LEFT JOIN` 和 `RIGHT JOIN` 的組合。
+
+![圖片56](./images/56.PNG)
+
+#### 情境：部門配置與新進人員總覽
+
+```sql
+SELECT
+	teams.name AS team_name,
+  users.name AS user_name
+FROM users
+FULL JOIN teams ON users.team_id = teams.id;
+```
+
+![圖片57](./images/57.PNG)
+
+### JOIN 搭配 COALESCE 設計
+
+可以搭配 `COALESCE` 來處理 `NULL` 資料顯示。
+
+```sql
+SELECT
+	COALESCE(teams.name, '未分配') AS team_name,
+  COALESCE(users.name, '無員工') AS user_name
+FROM users
+FULL JOIN teams ON users.team_id = teams.id;
+```
+
+![圖片58](./images/58.PNG)
 
 ## 資料庫與 Docker 環境建立
 
