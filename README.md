@@ -94,6 +94,12 @@
 
   - [JOIN 組合+排序技巧](#join-組合排序技巧)
 
+- [GROUP BY 分組資料](#group-by-分組資料)
+
+  - [基本語法](#基本語法)
+
+  - [JOIN 整合教學](#join-整合教學)
+
 - [資料庫與 Docker 環境建立](#資料庫與-docker-環境建立)
 
   - [安裝 DBeaver](#安裝-dbeaver)
@@ -1143,6 +1149,106 @@ ORDER BY salary ASC;
 ```
 
 ![圖片65](./images/65.PNG)
+
+## GROUP BY 分組資料
+
+可以使用 `GROUP BY` 來進行資料分組。
+
+並且也可以搭配聚合函數 ( Aggregate Functions ) 來進行分組計算( `COUNT`、`SUM`、`AVG`、`MAX`、`MIN` )，例如：計算各部門的平均薪資等等。
+
+公司員工資料庫範例：
+
+```sql
+-- 建立部門資料表
+CREATE TABLE teams (
+    id SERIAL PRIMARY KEY,  -- 部門編號，主鍵
+    name VARCHAR(50)        -- 部門名稱
+);
+
+-- 建立員工資料表
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,     -- 員工編號，主鍵
+    name VARCHAR(50),          -- 姓名
+    salary INTEGER,            -- 薪資
+    team_id INTEGER,           -- 部門編號，外來鍵
+    FOREIGN KEY (team_id) REFERENCES teams(id)  -- 設定外來鍵關聯
+);
+
+-- 新增部門資料
+INSERT INTO teams (name)
+VALUES
+    ('開發部'),
+    ('人事部');
+
+-- 新增員工資料
+INSERT INTO users (name, salary, team_id)
+VALUES
+    ('張小明', 45000, 1),
+    ('王大明', 48000, 1),
+    ('李小華', 43000, 2),
+    ('陳小玉', 55000, 2),
+    ('林小豪', 47000, 1);
+```
+
+![圖片59](./images/59.PNG)
+
+### 基本語法
+
+分組資料：
+
+```sql
+SELECT
+	team_id AS 部門ID
+FROM users
+GROUP BY team_id;
+```
+
+![圖片66](./images/66.PNG)
+
+搭配聚合函數計算：
+
+```sql
+-- 計算每個部門的人數
+SELECT
+	team_id AS 部門ID,
+  COUNT(*) AS 部門人數
+FROM users
+GROUP BY team_id;
+```
+
+![圖片67](./images/67.PNG)
+
+### JOIN 整合教學
+
+也可以先使用 `JOIN` 合併資料表再進行分組及計算。
+
+```sql
+-- 加上部門名稱計算每個部門的人數
+SELECT
+	teams.name AS 部門名稱,
+  COUNT(*) AS 部門人數
+FROM users
+INNER JOIN teams ON users.team_id = teams.id
+GROUP BY teams.name;
+```
+
+![圖片68](./images/68.PNG)
+
+```sql
+-- 計算各部門的完整統計資料
+SELECT
+	teams.name AS 部門名稱,
+  COUNT(*) AS 部門人數,
+  SUM(users.salary) AS 總薪資,
+  AVG(users.salary) AS 平均薪資,
+  MAX(users.salary) AS 最高薪資,
+  MIN(users.salary) AS 最低薪資
+FROM users
+INNER JOIN teams ON users.team_id = teams.id
+GROUP BY teams.name;
+```
+
+![圖片69](./images/69.PNG)
 
 ## 資料庫與 Docker 環境建立
 
