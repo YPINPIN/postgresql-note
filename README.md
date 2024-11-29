@@ -6,6 +6,16 @@
 
 - [每日任務紀錄](./task/task.md)
 
+## 直播課講義
+
+- [第一堂：資料庫基礎與 PostgreSQL 簡介](https://hackmd.io/@hexschool/HybGgR5fyg)
+
+- [第二堂：資料模型與資料表操作](https://hackmd.io/@hexschool/rkFWn6hG1g)
+
+- [第三堂：前台專案實戰 - 客戶端資料庫規劃](https://hackmd.io/@hexschool/HJu3Kf4Qye)
+
+- [第四堂：後台專案實戰 - 管理者端資料庫規劃](https://hackmd.io/@hexschool/SkoHGqSmJe)
+
 ## 目錄
 
 - 資料庫簡介
